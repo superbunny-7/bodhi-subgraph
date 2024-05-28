@@ -4,11 +4,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: Bodhi
-    network: mainnet
+    network: testnet
     source:
-      address: "0x9ec8d67cc6ac5220695b5d31b25563f5ad6c31c5"
+      address: "0x375820ba9d9850009a690ac8145979c92a8fa0fb"
       abi: Bodhi
-      startBlock: 96739030
+      startBlock: 173139935
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
