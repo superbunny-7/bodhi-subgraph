@@ -1,0 +1,77 @@
+
+type Create @entity(immutable: true) {
+  id: Bytes!
+  assetId: BigInt! # uint256
+  sender: Bytes! # address
+  arTxId: String! # string
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Remove @entity(immutable: true) {
+  id: Bytes!
+  assetId: BigInt! # uint256
+  sender: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Trade @entity(immutable: true) {
+  id: Bytes!
+  tradeType: Int! # uint8
+  assetId: BigInt! # uint256
+  user: User! # address
+  tokenAmount: BigDecimal!
+  ethAmount: BigDecimal!
+  creatorFee: BigDecimal!
+  price: BigDecimal!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Transfer @entity(immutable: true) {
+  id: Bytes!
+  operator: Bytes! # address
+  from: Bytes! # address
+  to: Bytes! # address
+  assetId: BigInt! # uint256
+  amount: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type User @entity {
+  id: ID!
+  address: Bytes! # address
+  creatorProfit: BigDecimal!
+  tradingPnl: BigDecimal!
+  totalTrades: BigInt!
+  assets: [UserAsset!]! @derivedFrom(field: "user")
+  trades: [Trade!]! @derivedFrom(field: "user")
+}
+
+type UserAsset @entity {
+  id: ID! # `user.id.concat(asset.id)`
+  assetId: BigInt!
+  user: User!
+  asset: Asset!
+  amount: BigDecimal!
+  avgPrice: BigDecimal!
+}
+
+type Asset @entity {
+  id: ID!
+  assetId: BigInt!
+  arTxId: String
+  creator: User
+  totalSupply: BigDecimal!
+  totalTrades: BigInt!
+  totalFees: BigDecimal!
+  totalVolume: BigDecimal!
+  totalHolders: BigInt!
+  holders: [UserAsset!]! @derivedFrom(field: "asset")
+}

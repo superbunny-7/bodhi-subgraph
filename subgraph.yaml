@@ -1,0 +1,36 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Bodhi
+    network: mainnet
+    source:
+      address: "0x9ec8d67cc6ac5220695b5d31b25563f5ad6c31c5"
+      abi: Bodhi
+      startBlock: 96739030
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Create
+        # - Remove
+        # - Trade
+        # - TransferBatch
+        # - TransferSingle
+      abis:
+        - name: Bodhi
+          file: ./abis/Bodhi.json
+      eventHandlers:
+        - event: Create(indexed uint256,indexed address,string)
+          handler: handleCreate
+        - event: Remove(indexed uint256,indexed address)
+          handler: handleRemove
+        - event: Trade(indexed uint8,indexed uint256,indexed address,uint256,uint256,uint256)
+          handler: handleTrade
+        - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
+          handler: handleTransferBatch
+        - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleTransferSingle
+      file: ./src/bodhi.ts

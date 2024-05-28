@@ -1,0 +1,17 @@
+{
+  "name": "bodhi-subgraph",
+  "license": "UNLICENSED",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "create": "graph create --node http://localhost:8020/ conflux/bodhi-subgraph",
+    "remove": "graph remove --node http://localhost:8020/ conflux/bodhi-subgraph",
+    "deploy": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:8020 --version-label 1.0.0 conflux/bodhi-subgraph", 
+    "test": "graph test"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "0.63.1",
+    "@graphprotocol/graph-ts": "0.32.0"
+  },
+  "devDependencies": { "matchstick-as": "0.5.0" }
+}
