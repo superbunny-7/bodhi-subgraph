@@ -15,10 +15,10 @@ dataSources:
       language: wasm/assemblyscript
       entities:
         - Create
-        # - Remove
-        # - Trade
-        # - TransferBatch
-        # - TransferSingle
+        - Remove
+        - Trade
+        - TransferBatch
+        - TransferSingle
       abis:
         - name: Bodhi
           file: ./abis/Bodhi.json
