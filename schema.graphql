@@ -26,6 +26,7 @@ type Trade @entity(immutable: true) {
   tokenAmount: BigDecimal!
   ethAmount: BigDecimal!
   creatorFee: BigDecimal!
+  platformFee: BigDecimal! # uint256
   price: BigDecimal!
   blockNumber: BigInt!
   blockTimestamp: BigInt!

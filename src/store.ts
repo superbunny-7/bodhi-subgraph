@@ -62,6 +62,7 @@ export function newTrade(event: TradeEvent, user: User): void {
   entity.tokenAmount = fromWei(event.params.tokenAmount);
   entity.ethAmount = fromWei(event.params.ethAmount);
   entity.creatorFee = fromWei(event.params.creatorFee);
+  entity.platformFee = fromWei(event.params.platformFee);
 
   if (entity.tokenAmount.gt(BD_ZERO)) {
     entity.price = entity.ethAmount

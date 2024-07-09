@@ -27,7 +27,7 @@ dataSources:
           handler: handleCreate
         - event: Remove(indexed uint256,indexed address)
           handler: handleRemove
-        - event: Trade(indexed uint8,indexed uint256,indexed address,uint256,uint256,uint256)
+        - event: Trade(indexed uint8,indexed uint256,indexed address,uint256,uint256,uint256,uint256)
           handler: handleTrade
         - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
           handler: handleTransferBatch
