@@ -6,9 +6,9 @@ dataSources:
     name: Bodhi
     network: sepolia
     source:
-      address: "0x97f4ca1e44d2675b84772bc3f295d297f14953d6"
+      address: "0xa19b7e64d3678ab69814d0eb18e1792b624aabee"
       abi: Bodhi
-      startBlock: 6264315
+      startBlock: 6282422
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
