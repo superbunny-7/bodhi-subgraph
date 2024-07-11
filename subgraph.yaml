@@ -6,9 +6,9 @@ dataSources:
     name: Bodhi
     network: sepolia
     source:
-      address: "0xa19b7e64d3678ab69814d0eb18e1792b624aabee"
+      address: "0x96ae422c91b1024a88db5f4a06bba1ca6d99ac11"
       abi: Bodhi
-      startBlock: 6282422
+      startBlock: 6289963
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -23,7 +23,7 @@ dataSources:
         - name: Bodhi
           file: ./abis/Bodhi.json
       eventHandlers:
-        - event: Create(indexed uint256,indexed address,string)
+        - event: Create(indexed uint256,indexed address,string,bool)
           handler: handleCreate
         - event: Remove(indexed uint256,indexed address)
           handler: handleRemove

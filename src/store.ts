@@ -26,7 +26,8 @@ export function newCreate(event: CreateEvent): void {
   create.assetId = event.params.assetId;
   create.sender = event.params.sender;
   create.arTxId = event.params.arTxId;
-
+  create.isContract = event.params.isContract;
+  
   create.blockNumber = event.block.number;
   create.blockTimestamp = event.block.timestamp;
   create.transactionHash = event.transaction.hash;
