@@ -6,6 +6,7 @@ import {
   User,
   Asset,
   UserAsset,
+  UserSpace,
 } from "../generated/schema";
 import {
   Create as CreateEvent,
@@ -14,7 +15,7 @@ import {
   TransferBatch as TransferBatchEvent,
   TransferSingle as TransferSingleEvent,
 } from "../generated/Bodhi/Bodhi";
-import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt, Bytes } from "@graphprotocol/graph-ts";
 import { ADDRESS_ZERO, BD_ZERO, BI_ZERO, fromWei } from "./number";
 
 export function newCreate(event: CreateEvent): void {
@@ -27,7 +28,7 @@ export function newCreate(event: CreateEvent): void {
   create.sender = event.params.sender;
   create.arTxId = event.params.arTxId;
   create.isContract = event.params.isContract;
-  
+
   create.blockNumber = event.block.number;
   create.blockTimestamp = event.block.timestamp;
   create.transactionHash = event.transaction.hash;
@@ -155,7 +156,7 @@ export function getOrCreateAsset(id: BigInt): Asset {
   }
   return asset;
 }
-
+ 
 export function getOrCreateUser(addr: Address): User {
   const id = addr.toHexString();
   let user = User.load(id);
@@ -168,6 +169,22 @@ export function getOrCreateUser(addr: Address): User {
     user.save();
   }
   return user;
+}
+
+export function getOrCreateUserSpace(userAddress: Address): UserSpace {
+  let userSpace = UserSpace.load(userAddress.toHex());
+
+  if (userSpace == null) {
+    userSpace = new UserSpace(userAddress.toHex());
+    userSpace.user = userAddress;
+    userSpace.totalAssets = BigInt.zero();
+    userSpace.totalSupply = BigDecimal.zero();
+    userSpace.totalVolume = BigDecimal.zero();
+    userSpace.totalFees = BigDecimal.zero();
+    userSpace.totalHolders = BigInt.zero();
+  }
+
+  return userSpace;
 }
 
 export function getOrCreateUserAsset(user: User, asset: Asset): UserAsset {

@@ -24,17 +24,28 @@ import {
   getOrCreateAsset,
   getOrCreateUser,
   getOrCreateUserAsset,
+  getOrCreateUserSpace,
 } from "./store";
+import { User } from "../generated/schema";
 
 export function handleCreate(event: CreateEvent): void {
   newCreate(event);
   getOrCreateUser(event.params.sender);
+
   const asset = getOrCreateAsset(event.params.assetId);
   asset.assetId = event.params.assetId;
   asset.arTxId = event.params.arTxId;
   asset.creator = event.params.sender.toHexString();
   asset.totalSupply = BD_WAD;
   asset.save();
+
+  if (event.params.isContract == false) {
+    let userSpace = getOrCreateUserSpace(event.params.sender);
+    userSpace.user = event.params.sender;
+    userSpace.totalAssets = userSpace.totalAssets.plus(BI_ONE);
+    userSpace.totalSupply = userSpace.totalSupply.plus(BD_WAD);
+    userSpace.save();
+  }
 }
 
 export function handleRemove(event: RemoveEvent): void {
@@ -50,6 +61,7 @@ export function handleTrade(event: TradeEvent): void {
   const asset = getOrCreateAsset(event.params.assetId);
   asset.totalTrades = asset.totalTrades.plus(BI_ONE);
   trader.totalTrades = trader.totalTrades.plus(BI_ONE);
+
   if (event.params.tradeType == 0) {
     // create
     asset.totalSupply = deltaAmount;
@@ -59,6 +71,7 @@ export function handleTrade(event: TradeEvent): void {
   }
 
   const creator = getOrCreateUser(Address.fromString(asset.creator!));
+  let creatorUserSpace = getOrCreateUserSpace(Address.fromString(asset.creator!));
   const traderAsset = getOrCreateUserAsset(trader, asset);
 
   const creatorFee = fromWei(event.params.creatorFee);
@@ -67,12 +80,16 @@ export function handleTrade(event: TradeEvent): void {
   asset.totalFees = asset.totalFees.plus(creatorFee);
   asset.totalVolume = asset.totalVolume.plus(ethAmount);
 
+  creatorUserSpace.totalFees = creatorUserSpace.totalFees.plus(creatorFee);
+  creatorUserSpace.totalVolume = creatorUserSpace.totalVolume.plus(ethAmount);
+
   creator.creatorProfit = creator.creatorProfit.plus(creatorFee);
   creator.save();
 
   if (event.params.tradeType == 1) {
     // buy
     asset.totalSupply = asset.totalSupply.plus(deltaAmount);
+    creatorUserSpace.totalSupply = creatorUserSpace.totalSupply.plus(deltaAmount);
     const cost = creatorFee.plus(ethAmount);
     // traderAsset.amount is updated before this handle function (in handleTransfer)
     // newCost = ((updatedAmount - deltaAmount) * avgPriceBefore + cost)
@@ -86,6 +103,7 @@ export function handleTrade(event: TradeEvent): void {
   } else {
     // sell
     asset.totalSupply = asset.totalSupply.minus(deltaAmount);
+    creatorUserSpace.totalSupply = creatorUserSpace.totalSupply.minus(deltaAmount);
     const cost = deltaAmount.times(traderAsset.avgPrice);
     trader.tradingPnl = trader.tradingPnl.plus(
       ethAmount.minus(creatorFee).minus(cost)
@@ -94,6 +112,7 @@ export function handleTrade(event: TradeEvent): void {
   }
 
   asset.save();
+  creatorUserSpace.save();
 }
 
 export function handleTransferBatch(event: TransferBatchEvent): void {
@@ -131,6 +150,7 @@ function handleTransfer(
     userAsset.amount = userAsset.amount.minus(amountBd);
     if (userAsset.amount.equals(BD_ZERO)) {
       asset.totalHolders = asset.totalHolders.minus(BI_ONE);
+      updateUserSpaceHolders(fromUser, -1);
       assetChanged = true;
     }
     userAsset.save();
@@ -141,6 +161,7 @@ function handleTransfer(
     const userAsset = getOrCreateUserAsset(toUser, asset);
     if (userAsset.amount.equals(BD_ZERO) && amountBd.gt(BD_ZERO)) {
       asset.totalHolders = asset.totalHolders.plus(BI_ONE);
+      updateUserSpaceHolders(toUser, 1);
       assetChanged = true;
     }
     userAsset.amount = userAsset.amount.plus(amountBd);
@@ -149,5 +170,13 @@ function handleTransfer(
 
   if (assetChanged) {
     asset.save();
+  }
+}
+
+function updateUserSpaceHolders(user: User, delta: i32): void {
+  let userSpace = getOrCreateUserSpace(Address.fromString(user.id));
+  if (userSpace !== null && userSpace.totalAssets.gt(BigInt.zero())) {
+    userSpace.totalHolders = userSpace.totalHolders.plus(BigInt.fromI32(delta));
+    userSpace.save();
   }
 }

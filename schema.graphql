@@ -1,4 +1,3 @@
-
 type Create @entity(immutable: true) {
   id: Bytes!
   assetId: BigInt! # uint256
@@ -76,4 +75,46 @@ type Asset @entity {
   totalVolume: BigDecimal!
   totalHolders: BigInt!
   holders: [UserAsset!]! @derivedFrom(field: "asset")
+}
+
+type UserSpace @entity {
+  id: ID!
+  user: Bytes! # address
+  totalAssets: BigInt!
+  totalSupply: BigDecimal!
+  totalVolume: BigDecimal!
+  totalFees: BigDecimal!
+  totalHolders: BigInt!
+}
+
+type SpaceFactory @entity {
+  id: ID!
+  user: Bytes! # address
+  spaceId: BigInt! # uint256
+  spaceAddress: Bytes!
+  descriptionAssetId: BigInt! # uint256
+  spaceName: String! # string
+  avatarArTxId: String! # string
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  asset: Asset!
+}
+
+type Space @entity {
+  id: Bytes!
+  sender: Bytes!
+  parentId: BigInt!
+  assetId: BigInt!
+  arTxId: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  spaceFactory: SpaceFactory
+}
+
+type SpaceCount @entity {
+  id: ID!
+  parentId: BigInt!
+  count: BigInt!
 }

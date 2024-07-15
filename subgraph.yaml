@@ -1,6 +1,7 @@
 specVersion: 0.0.5
 schema:
   file: ./schema.graphql
+
 dataSources:
   - kind: ethereum
     name: Bodhi
@@ -34,3 +35,51 @@ dataSources:
         - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
           handler: handleTransferSingle
       file: ./src/bodhi.ts
+
+  - kind: ethereum
+    name: SpaceFactory
+    network: sepolia
+    source:
+      address: "0xa494ae8027dc462b97a99421f405e70bb8e13498"
+      abi: SpaceFactory
+      startBlock: 6290037
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - SpaceFactory
+        - Space
+      abis:
+        - name: SpaceFactory
+          file: ./abis/SpaceFactory.json
+        - name: Space
+          file: ./abis/Space.json
+      eventHandlers:
+        - event: Create(uint256,indexed address,indexed uint256,address,string)
+          handler: handleFactoryCreate
+        - event: SpaceNameUpdated(indexed address,string,string)
+          handler: handleSpaceNameUpdated
+        - event: AvatarUpdated(indexed address,string,uint256)
+          handler: handleAvatarUpdated
+      file: ./src/space.ts
+
+templates:
+  - kind: ethereum
+    name: Space
+    network: sepolia
+    source:
+      abi: Space
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Space
+      abis:
+        - name: Space
+          file: ./abis/Space.json
+      eventHandlers:
+        - event: Create(indexed uint256,indexed uint256,indexed address,string)
+          handler: handleSpaceCreate
+      file: ./src/space.ts
