@@ -1,9 +1,9 @@
-import { SpaceFactory, Space,SpaceCount } from "../generated/schema";
+import { SpaceFactory, Space, SpaceCount, Asset } from "../generated/schema";
 import { Create as FactoryCreate, SpaceNameUpdated, AvatarUpdated } from "../generated/SpaceFactory/SpaceFactory";
-import { Create as SpaceCreate, Remove as SpaceRemove } from "../generated/templates/Space/Space";
+import { Create as SpaceCreate, Remove as SpaceRemove, RemoveBodhi } from "../generated/templates/Space/Space";
 import { Space as SpaceTemplate } from "../generated/templates";
 import { BigInt, Bytes } from "@graphprotocol/graph-ts";
-import { getOrCreateAsset } from "./store";
+
 
 // Helper function to get or create a SpaceFactory entity
 function getOrCreateSpaceFactory(creator: string): SpaceFactory {
@@ -47,14 +47,16 @@ export function handleFactoryCreate(event: FactoryCreate): void {
     entity.spaceId = event.params.spaceId;
     entity.spaceAddress = event.params.spaceAddress;
     entity.descriptionAssetId = event.params.assetId;
-    entity.spaceName =  event.params.spaceName;
+    entity.spaceName = event.params.spaceName;
     entity.avatarArTxId = ""; // or null
     entity.blockNumber = event.block.number;
     entity.blockTimestamp = event.block.timestamp;
     entity.transactionHash = event.transaction.hash;
 
-    const asset = getOrCreateAsset(event.params.assetId);
-    entity.asset=asset.id;
+    const asset = Asset.load(event.params.assetId.toString());
+    if (asset) {
+        entity.spaceAsset = asset.id;
+    }
     entity.save();
 
     // Create a new Space template instance for the dynamically created Space contract
@@ -77,15 +79,17 @@ export function handleAvatarUpdated(event: AvatarUpdated): void {
     entity.save();
 }
 
-export function handleSpaceCreate(event: SpaceCreate): void {  
+export function handleSpaceCreate(event: SpaceCreate): void {
     let spaceFactoryEntity = SpaceFactory.load(event.params.sender.toHexString());
 
-    let entity = new Space(
-        event.transaction.hash
-            .concat(Bytes.fromUTF8("-"))
-            .concatI32(event.logIndex.toI32())
-    );
-
+    // let entity = new Space(
+    //     event.transaction.hash
+    //         .concat(Bytes.fromUTF8("-"))
+    //         .concatI32(event.logIndex.toI32())
+    // ); 
+    // const id = event.params.parentId.toString() + '-' + event.params.assetId.toString()
+    const id = event.params.parentId.toString().concat("-").concat(event.params.assetId.toString());
+    let entity = new Space(id);
     entity.sender = event.params.sender;
     entity.parentId = event.params.parentId;
     entity.assetId = event.params.assetId;
@@ -93,6 +97,7 @@ export function handleSpaceCreate(event: SpaceCreate): void {
     entity.blockNumber = event.block.number;
     entity.blockTimestamp = event.block.timestamp;
     entity.transactionHash = event.transaction.hash;
+    entity.isDelete = false;
     if (spaceFactoryEntity == null) {
         entity.spaceFactory = "";
     } else {
@@ -101,8 +106,18 @@ export function handleSpaceCreate(event: SpaceCreate): void {
 
     entity.save();
 
-     // Update SpaceCount
-     let spaceCountEntity = getOrCreateSpaceCount(event.params.parentId);
-     spaceCountEntity.count = spaceCountEntity.count.plus(BigInt.fromI32(1));
-     spaceCountEntity.save();
+    // Update SpaceCount
+    let spaceCountEntity = getOrCreateSpaceCount(event.params.parentId);
+    spaceCountEntity.count = spaceCountEntity.count.plus(BigInt.fromI32(1));
+    spaceCountEntity.save();
 }
+
+export function handleRemoveBodhi(event: RemoveBodhi): void { 
+    const id = event.params.parentId.toString().concat("-").concat(event.params.assetId.toString());
+    let entity = Space.load(id);
+    if (entity) {
+        entity.isDelete = true;
+        entity.save();
+    }
+}
+

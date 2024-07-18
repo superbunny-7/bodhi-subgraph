@@ -7,9 +7,9 @@ dataSources:
     name: Bodhi
     network: sepolia
     source:
-      address: "0x96ae422c91b1024a88db5f4a06bba1ca6d99ac11"
+      address: "0x8920b2b8c488546b30106067894402992f9d09d7"
       abi: Bodhi
-      startBlock: 6289963
+      startBlock: 6331484
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -28,7 +28,7 @@ dataSources:
           handler: handleCreate
         - event: Remove(indexed uint256,indexed address)
           handler: handleRemove
-        - event: Trade(indexed uint8,indexed uint256,indexed address,uint256,uint256,uint256,uint256)
+        - event: Trade(indexed uint8,indexed uint256,indexed address,uint256,uint256,uint256,uint256,bool)
           handler: handleTrade
         - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
           handler: handleTransferBatch
@@ -40,9 +40,9 @@ dataSources:
     name: SpaceFactory
     network: sepolia
     source:
-      address: "0xa494ae8027dc462b97a99421f405e70bb8e13498"
+      address: "0x214fa0ecfe73205535c15e31c9e17078345129d5"
       abi: SpaceFactory
-      startBlock: 6290037
+      startBlock: 6331527
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -82,4 +82,6 @@ templates:
       eventHandlers:
         - event: Create(indexed uint256,indexed uint256,indexed address,string)
           handler: handleSpaceCreate
+        - event: RemoveBodhi(indexed uint256,indexed uint256,address)
+          handler: handleRemoveBodhi
       file: ./src/space.ts

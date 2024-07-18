@@ -6,7 +6,6 @@ import {
   User,
   Asset,
   UserAsset,
-  UserSpace,
 } from "../generated/schema";
 import {
   Create as CreateEvent,
@@ -16,7 +15,7 @@ import {
   TransferSingle as TransferSingleEvent,
 } from "../generated/Bodhi/Bodhi";
 import { Address, BigDecimal, BigInt, Bytes } from "@graphprotocol/graph-ts";
-import { ADDRESS_ZERO, BD_ZERO, BI_ZERO, fromWei } from "./number";
+import { ADDRESS_ZERO, BD_WAD, BD_ZERO, BI_ONE, BI_ZERO, fromWei } from "./number";
 
 export function newCreate(event: CreateEvent): void {
   let create = new Create(
@@ -52,7 +51,7 @@ export function newRemove(event: RemoveEvent): void {
   entity.save();
 }
 
-export function newTrade(event: TradeEvent, user: User): void {
+export function newTrade(event: TradeEvent, user: string): void {
   let entity = new Trade(
     event.transaction.hash
       .concat(Bytes.fromUTF8("-"))
@@ -60,15 +59,17 @@ export function newTrade(event: TradeEvent, user: User): void {
   );
   entity.tradeType = event.params.tradeType;
   entity.assetId = event.params.assetId;
-  entity.user = user.id;
+  entity.user = user;
   entity.tokenAmount = fromWei(event.params.tokenAmount);
   entity.ethAmount = fromWei(event.params.ethAmount);
   entity.creatorFee = fromWei(event.params.creatorFee);
   entity.platformFee = fromWei(event.params.platformFee);
+  entity.isContract = event.params.isContract;
 
   if (entity.tokenAmount.gt(BD_ZERO)) {
     entity.price = entity.ethAmount
       .plus(entity.creatorFee)
+      .plus(entity.platformFee)
       .div(entity.tokenAmount);
   } else {
     entity.price = BD_ZERO;
@@ -140,60 +141,54 @@ export function newTransferFromBatch(
   entity.save();
 }
 
-export function getOrCreateAsset(id: BigInt): Asset {
+export function getOrCreateUser(addr: Address, isContract: boolean): User {
+  const id = addr.toHexString();
+  let user = User.load(id);
+  if (user == null) {
+    user = new User(id);
+    user.address = addr;
+    // user.creatorProfit = BD_ZERO;
+    // user.tradingPnl = BD_ZERO;
+    user.totalTrades = BI_ZERO;
+    user.totalAssets = BI_ZERO;
+    user.totalTradVolume = BD_ZERO;
+    user.totalTradValue = BD_ZERO;
+    user.totalFees = BD_ZERO;
+    user.totalHolders = BI_ZERO;
+    user.isContract = isContract;
+    user.save();
+  }
+  return user;
+}
+
+export function CreateAsset(id: BigInt): Asset {
   let asset = Asset.load(id.toString());
   if (asset == null) {
     asset = new Asset(id.toString());
     asset.assetId = id;
     asset.arTxId = null;
     asset.creator = null;
-    asset.totalSupply = BD_ZERO;
-    asset.totalTrades = BI_ZERO;
+    asset.totalSupply = BD_WAD;
+    asset.totalTrades = BI_ONE;
     asset.totalFees = BD_ZERO;
-    asset.totalVolume = BD_ZERO;
+    asset.totalTradValue = BD_ZERO;
+    asset.totalTradVolume = BD_ZERO;
     asset.totalHolders = BI_ZERO;
+    asset.isDelete = false;
     asset.save();
   }
   return asset;
 }
- 
-export function getOrCreateUser(addr: Address): User {
-  const id = addr.toHexString();
-  let user = User.load(id);
-  if (user == null) {
-    user = new User(id);
-    user.address = addr;
-    user.creatorProfit = BD_ZERO;
-    user.tradingPnl = BD_ZERO;
-    user.totalTrades = BI_ZERO;
-    user.save();
-  }
-  return user;
-}
 
-export function getOrCreateUserSpace(userAddress: Address): UserSpace {
-  let userSpace = UserSpace.load(userAddress.toHex());
 
-  if (userSpace == null) {
-    userSpace = new UserSpace(userAddress.toHex());
-    userSpace.user = userAddress;
-    userSpace.totalAssets = BigInt.zero();
-    userSpace.totalSupply = BigDecimal.zero();
-    userSpace.totalVolume = BigDecimal.zero();
-    userSpace.totalFees = BigDecimal.zero();
-    userSpace.totalHolders = BigInt.zero();
-  }
 
-  return userSpace;
-}
-
-export function getOrCreateUserAsset(user: User, asset: Asset): UserAsset {
-  const id = user.id.concat("-").concat(asset.id);
+export function getOrCreateUserAsset(user: string, asset: Asset): UserAsset {
+  const id = user.concat("-").concat(asset.id);
   let userAsset = UserAsset.load(id);
   if (userAsset == null) {
     userAsset = new UserAsset(id);
     userAsset.assetId = asset.assetId;
-    userAsset.user = user.id;
+    userAsset.user = user;
     userAsset.asset = asset.id;
     userAsset.amount = BD_ZERO;
     userAsset.avgPrice = BD_ZERO;
@@ -201,3 +196,4 @@ export function getOrCreateUserAsset(user: User, asset: Asset): UserAsset {
   }
   return userAsset;
 }
+

@@ -66,6 +66,31 @@
 		"type": "event"
 	},
 	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "parentId",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "assetId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			}
+		],
+		"name": "RemoveBodhi",
+		"type": "event"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -290,11 +315,34 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
+				"name": "parentId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
 				"name": "assetId",
 				"type": "uint256"
 			}
 		],
 		"name": "removeFromBodhi",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "parentId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "assetIds",
+				"type": "uint256[]"
+			}
+		],
+		"name": "removeFromBodhiByOwner",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

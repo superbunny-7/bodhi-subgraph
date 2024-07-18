@@ -1,4 +1,4 @@
-import { Address, BigInt, store } from "@graphprotocol/graph-ts";
+import { Address, BigInt } from "@graphprotocol/graph-ts";
 import {
   Create as CreateEvent,
   Remove as RemoveEvent,
@@ -11,7 +11,6 @@ import {
   BD_WAD,
   BD_ZERO,
   BI_ONE,
-  BI_WAD,
   BI_ZERO,
   fromWei,
 } from "./number";
@@ -21,98 +20,98 @@ import {
   newTrade,
   newTransferFromSingle,
   newTransferFromBatch,
-  getOrCreateAsset,
-  getOrCreateUser,
   getOrCreateUserAsset,
-  getOrCreateUserSpace,
+  getOrCreateUser,
+  CreateAsset,
 } from "./store";
-import { User } from "../generated/schema";
+import { Asset, User } from "../generated/schema";
 
 export function handleCreate(event: CreateEvent): void {
-  newCreate(event);
-  getOrCreateUser(event.params.sender);
-
-  const asset = getOrCreateAsset(event.params.assetId);
-  asset.assetId = event.params.assetId;
-  asset.arTxId = event.params.arTxId;
-  asset.creator = event.params.sender.toHexString();
-  asset.totalSupply = BD_WAD;
-  asset.save();
 
   if (event.params.isContract == false) {
-    let userSpace = getOrCreateUserSpace(event.params.sender);
-    userSpace.user = event.params.sender;
-    userSpace.totalAssets = userSpace.totalAssets.plus(BI_ONE);
-    userSpace.totalSupply = userSpace.totalSupply.plus(BD_WAD);
-    userSpace.save();
+    newCreate(event);
+
+    let user = getOrCreateUser(event.params.sender, false);
+    user.totalAssets = user.totalAssets.plus(BI_ONE);
+    // user.totalTrades = user.totalTrades.plus(BI_ONE);
+    // user.totalHolders = user.totalHolders.plus(BI_ONE);
+    user.save();
+
+    const asset = CreateAsset(event.params.assetId);
+    asset.assetId = event.params.assetId;
+    asset.arTxId = event.params.arTxId;
+    asset.creator = event.params.sender.toHexString();
+    asset.save();
   }
+
 }
 
 export function handleRemove(event: RemoveEvent): void {
-  newRemove(event);
+  let asset = Asset.load(event.params.assetId.toString());
+  if (asset) {
+    asset.isDelete = true;
+    asset.save();
+
+    newRemove(event);
+  }
 }
 
 export function handleTrade(event: TradeEvent): void {
-  const trader = getOrCreateUser(event.params.sender);
-  newTrade(event, trader);
+  newTrade(event, event.params.sender.toHexString());
+
+  // const trader = User.load(event.params.sender.toHexString());
+  const asset = Asset.load(event.params.assetId.toString());
 
   const deltaAmount = fromWei(event.params.tokenAmount);
-
-  const asset = getOrCreateAsset(event.params.assetId);
-  asset.totalTrades = asset.totalTrades.plus(BI_ONE);
-  trader.totalTrades = trader.totalTrades.plus(BI_ONE);
-
-  if (event.params.tradeType == 0) {
-    // create
-    asset.totalSupply = deltaAmount;
-    asset.save();
-    trader.save();
-    return;
-  }
-
-  const creator = getOrCreateUser(Address.fromString(asset.creator!));
-  let creatorUserSpace = getOrCreateUserSpace(Address.fromString(asset.creator!));
-  const traderAsset = getOrCreateUserAsset(trader, asset);
-
   const creatorFee = fromWei(event.params.creatorFee);
+  const platformFee = fromWei(event.params.platformFee);
   const ethAmount = fromWei(event.params.ethAmount);
 
-  asset.totalFees = asset.totalFees.plus(creatorFee);
-  asset.totalVolume = asset.totalVolume.plus(ethAmount);
 
-  creatorUserSpace.totalFees = creatorUserSpace.totalFees.plus(creatorFee);
-  creatorUserSpace.totalVolume = creatorUserSpace.totalVolume.plus(ethAmount);
+  if (asset) {
 
-  creator.creatorProfit = creator.creatorProfit.plus(creatorFee);
-  creator.save();
+    if (event.params.tradeType == 0) {
+      //MINT
 
-  if (event.params.tradeType == 1) {
-    // buy
-    asset.totalSupply = asset.totalSupply.plus(deltaAmount);
-    creatorUserSpace.totalSupply = creatorUserSpace.totalSupply.plus(deltaAmount);
-    const cost = creatorFee.plus(ethAmount);
-    // traderAsset.amount is updated before this handle function (in handleTransfer)
-    // newCost = ((updatedAmount - deltaAmount) * avgPriceBefore + cost)
-    // newAvgPrice = newCost / updatedAmount
-    traderAsset.avgPrice = traderAsset.amount
-      .minus(deltaAmount)
-      .times(traderAsset.avgPrice)
-      .plus(cost)
-      .div(traderAsset.amount);
-    traderAsset.save();
-  } else {
-    // sell
-    asset.totalSupply = asset.totalSupply.minus(deltaAmount);
-    creatorUserSpace.totalSupply = creatorUserSpace.totalSupply.minus(deltaAmount);
-    const cost = deltaAmount.times(traderAsset.avgPrice);
-    trader.tradingPnl = trader.tradingPnl.plus(
-      ethAmount.minus(creatorFee).minus(cost)
-    );
-    trader.save();
+    } else if (event.params.tradeType == 1) {
+      //Buy
+      asset.totalTrades = asset.totalTrades.plus(BI_ONE);
+      asset.totalSupply = asset.totalSupply.plus(deltaAmount);
+    } else {
+      //Sell
+      asset.totalTrades = asset.totalTrades.plus(BI_ONE);
+      asset.totalSupply = asset.totalSupply.minus(deltaAmount);
+    }
+    asset.totalFees = asset.totalFees.plus(creatorFee); //.plus(platformFee);
+    // asset.totalVolume = asset.totalVolume.plus(ethAmount);
+    asset.totalTradValue = asset.totalTradValue.plus(ethAmount);
+    asset.totalTradVolume = asset.totalTradVolume.plus(deltaAmount);
+    asset.save();
+
+    if (event.params.tradeType !== 0) {
+      const creator = User.load(asset.creator!);
+      if (creator) {
+        creator.totalTrades = creator.totalTrades.plus(BI_ONE);
+        creator.totalFees = creator.totalFees.plus(creatorFee);
+        creator.totalTradValue = creator.totalTradValue.plus(ethAmount);
+        creator.totalTradVolume = creator.totalTradVolume.plus(deltaAmount);
+      }
+    }
+
+    if (event.params.tradeType == 1) {
+      const cost = creatorFee.plus(platformFee).plus(ethAmount);
+
+      const traderAsset = getOrCreateUserAsset(event.params.sender.toHexString(), asset);
+      traderAsset.avgPrice = traderAsset.amount
+        .minus(deltaAmount)
+        .times(traderAsset.avgPrice)
+        .plus(cost)
+        .div(traderAsset.amount);
+      traderAsset.save();
+    }
+
   }
 
-  asset.save();
-  creatorUserSpace.save();
 }
 
 export function handleTransferBatch(event: TransferBatchEvent): void {
@@ -140,43 +139,51 @@ function handleTransfer(
   to: Address,
   amount: BigInt
 ): void {
-  const asset = getOrCreateAsset(id);
   const amountBd = fromWei(amount);
   let assetChanged = false;
+  const asset = Asset.load(id.toString());
+  if (asset) {
+    const creator = User.load(asset.creator!);
 
-  if (from.toHexString() != ADDRESS_ZERO) {
-    const fromUser = getOrCreateUser(from);
-    const userAsset = getOrCreateUserAsset(fromUser, asset);
-    userAsset.amount = userAsset.amount.minus(amountBd);
-    if (userAsset.amount.equals(BD_ZERO)) {
-      asset.totalHolders = asset.totalHolders.minus(BI_ONE);
-      updateUserSpaceHolders(fromUser, -1);
-      assetChanged = true;
-    }
-    userAsset.save();
-  }
+    if (creator) {
+      if (from.toHexString() != ADDRESS_ZERO) {
+        const fromUser = User.load(from.toHexString());
+        if (fromUser && fromUser.isContract == false) {
+          //Sell
+          const userAsset = getOrCreateUserAsset(from.toHexString(), asset);
+          userAsset.amount = userAsset.amount.minus(amountBd);
 
-  if (to.toHexString() != ADDRESS_ZERO) {
-    const toUser = getOrCreateUser(to);
-    const userAsset = getOrCreateUserAsset(toUser, asset);
-    if (userAsset.amount.equals(BD_ZERO) && amountBd.gt(BD_ZERO)) {
-      asset.totalHolders = asset.totalHolders.plus(BI_ONE);
-      updateUserSpaceHolders(toUser, 1);
-      assetChanged = true;
-    }
-    userAsset.amount = userAsset.amount.plus(amountBd);
-    userAsset.save();
-  }
+          if (userAsset.amount.equals(BD_ZERO)) {
+            asset.totalHolders = asset.totalHolders.minus(BI_ONE);
+            creator.totalHolders = creator.totalHolders.minus(BI_ONE);
+            assetChanged = true;
+          }
+          userAsset.save();
+        }
+      }
 
-  if (assetChanged) {
-    asset.save();
+      if (to.toHexString() != ADDRESS_ZERO) {
+        const toUser = User.load(to.toHexString());
+        if (toUser && toUser.isContract == false) {
+          //Buy
+          const userAsset = getOrCreateUserAsset(to.toHexString(), asset);
+          if (userAsset.amount.equals(BD_ZERO) && amountBd.gt(BD_ZERO)) {
+            asset.totalHolders = asset.totalHolders.plus(BI_ONE);
+            creator.totalHolders = creator.totalHolders.plus(BI_ONE);
+            assetChanged = true;
+          }
+          userAsset.amount = userAsset.amount.plus(amountBd); 
+          userAsset.save();
+        }
+      }
+
+      if (assetChanged) {
+        asset.save();
+        creator.save();
+      }
+
+    } 
   }
+ 
 }
 
-function updateUserSpaceHolders(user: User, delta: i32): void {
-  let userSpace = getOrCreateUserSpace(Address.fromString(user.id));
-  if (userSpace !== null && userSpace.totalAssets.gt(BigInt.zero())) {
-    userSpace.totalHolders = userSpace.totalHolders.plus(BigInt.fromI32(delta));
-    userSpace.save();
-  }
-}
