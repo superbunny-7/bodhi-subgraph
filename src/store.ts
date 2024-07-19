@@ -168,12 +168,12 @@ export function CreateAsset(id: BigInt): Asset {
     asset.assetId = id;
     asset.arTxId = null;
     asset.creator = null;
-    asset.totalSupply = BD_WAD;
+    asset.totalSupply = BD_ZERO;
     asset.totalTrades = BI_ONE;
     asset.totalFees = BD_ZERO;
     asset.totalTradValue = BD_ZERO;
     asset.totalTradVolume = BD_ZERO;
-    asset.totalHolders = BI_ZERO;
+    asset.totalHolders = BI_ONE;
     asset.isDelete = false;
     asset.save();
   }

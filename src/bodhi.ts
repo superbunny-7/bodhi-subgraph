@@ -1,4 +1,4 @@
-import { Address, BigInt } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import {
   Create as CreateEvent,
   Remove as RemoveEvent,
@@ -42,6 +42,10 @@ export function handleCreate(event: CreateEvent): void {
     asset.arTxId = event.params.arTxId;
     asset.creator = event.params.sender.toHexString();
     asset.save();
+
+    const userAsset = getOrCreateUserAsset(event.params.sender.toHexString(), asset);
+    userAsset.amount = BigDecimal.fromString("1");
+    userAsset.save();
   }
 
 }
@@ -59,7 +63,6 @@ export function handleRemove(event: RemoveEvent): void {
 export function handleTrade(event: TradeEvent): void {
   newTrade(event, event.params.sender.toHexString());
 
-  // const trader = User.load(event.params.sender.toHexString());
   const asset = Asset.load(event.params.assetId.toString());
 
   const deltaAmount = fromWei(event.params.tokenAmount);
@@ -70,9 +73,23 @@ export function handleTrade(event: TradeEvent): void {
 
   if (asset) {
 
+    if (event.params.isContract == false) {
+      const trader = User.load(event.params.sender.toHexString());
+      if (trader == null) {
+        let user = getOrCreateUser(event.params.sender, false);
+        user.totalAssets = user.totalAssets.plus(BI_ONE);
+        user.save();
+
+        const userAsset = getOrCreateUserAsset(event.params.sender.toHexString(), asset);
+        userAsset.amount = BigDecimal.fromString("1");
+        userAsset.save();
+      }
+    }
+
+
     if (event.params.tradeType == 0) {
       //MINT
-
+      asset.totalSupply = deltaAmount;
     } else if (event.params.tradeType == 1) {
       //Buy
       asset.totalTrades = asset.totalTrades.plus(BI_ONE);
@@ -99,15 +116,17 @@ export function handleTrade(event: TradeEvent): void {
     }
 
     if (event.params.tradeType == 1) {
-      const cost = creatorFee.plus(platformFee).plus(ethAmount);
+      if (event.params.isContract == false) {
+        const cost = creatorFee.plus(platformFee).plus(ethAmount);
 
-      const traderAsset = getOrCreateUserAsset(event.params.sender.toHexString(), asset);
-      traderAsset.avgPrice = traderAsset.amount
-        .minus(deltaAmount)
-        .times(traderAsset.avgPrice)
-        .plus(cost)
-        .div(traderAsset.amount);
-      traderAsset.save();
+        const traderAsset = getOrCreateUserAsset(event.params.sender.toHexString(), asset);
+        traderAsset.avgPrice = traderAsset.amount
+          .minus(deltaAmount)
+          .times(traderAsset.avgPrice)
+          .plus(cost)
+          .div(traderAsset.amount);
+        traderAsset.save();
+      }
     }
 
   }
@@ -172,7 +191,7 @@ function handleTransfer(
             creator.totalHolders = creator.totalHolders.plus(BI_ONE);
             assetChanged = true;
           }
-          userAsset.amount = userAsset.amount.plus(amountBd); 
+          userAsset.amount = userAsset.amount.plus(amountBd);
           userAsset.save();
         }
       }
@@ -182,8 +201,8 @@ function handleTransfer(
         creator.save();
       }
 
-    } 
+    }
   }
- 
+
 }
 
