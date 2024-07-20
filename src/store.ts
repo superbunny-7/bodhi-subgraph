@@ -51,7 +51,7 @@ export function newRemove(event: RemoveEvent): void {
   entity.save();
 }
 
-export function newTrade(event: TradeEvent, user: string): void {
+export function newTrade(event: TradeEvent, user: User): void {
   let entity = new Trade(
     event.transaction.hash
       .concat(Bytes.fromUTF8("-"))
@@ -59,7 +59,7 @@ export function newTrade(event: TradeEvent, user: string): void {
   );
   entity.tradeType = event.params.tradeType;
   entity.assetId = event.params.assetId;
-  entity.user = user;
+  entity.user = user.id;
   entity.tokenAmount = fromWei(event.params.tokenAmount);
   entity.ethAmount = fromWei(event.params.ethAmount);
   entity.creatorFee = fromWei(event.params.creatorFee);
@@ -161,7 +161,7 @@ export function getOrCreateUser(addr: Address, isContract: boolean): User {
   return user;
 }
 
-export function CreateAsset(id: BigInt): Asset {
+export function getOrCreateAsset(id: BigInt): Asset {
   let asset = Asset.load(id.toString());
   if (asset == null) {
     asset = new Asset(id.toString());
@@ -182,13 +182,13 @@ export function CreateAsset(id: BigInt): Asset {
 
 
 
-export function getOrCreateUserAsset(user: string, asset: Asset): UserAsset {
-  const id = user.concat("-").concat(asset.id);
+export function getOrCreateUserAsset(user: User, asset: Asset): UserAsset {
+  const id = user.id.concat("-").concat(asset.id);
   let userAsset = UserAsset.load(id);
   if (userAsset == null) {
     userAsset = new UserAsset(id);
     userAsset.assetId = asset.assetId;
-    userAsset.user = user;
+    userAsset.user = user.id;
     userAsset.asset = asset.id;
     userAsset.amount = BD_ZERO;
     userAsset.avgPrice = BD_ZERO;

@@ -6,12 +6,15 @@
     "build": "graph build",
     "create": "graph create --node http://localhost:8020/ conflux/bodhi-subgraph",
     "remove": "graph remove --node http://localhost:8020/ conflux/bodhi-subgraph",
-    "deploy": "graph deploy --studio bodhi-subgraph-sepolia", 
+    "deploy": "graph deploy --studio bodhi-subgraph-sepolia",
+    "deploy_goldsky": "goldsky subgraph deploy bodhi-subgraph-sepolia/1.0.2",
     "test": "graph test"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.63.1",
     "@graphprotocol/graph-ts": "0.32.0"
   },
-  "devDependencies": { "matchstick-as": "0.5.0" }
+  "devDependencies": {
+    "matchstick-as": "0.5.0"
+  }
 }
