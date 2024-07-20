@@ -84,12 +84,12 @@ export function newTrade(event: TradeEvent, user: User): void {
 
 export function newTransferFromSingle(event: TransferSingleEvent): void {
   // skip mint & burn
-  if (
-    event.params.from.toHexString() != ADDRESS_ZERO &&
-    event.params.to.toHexString() != ADDRESS_ZERO
-  ) {
-    return;
-  }
+  // if (
+  //   event.params.from.toHexString() != ADDRESS_ZERO &&
+  //   event.params.to.toHexString() != ADDRESS_ZERO
+  // ) {
+  //   return;
+  // }
 
   let entity = new Transfer(
     event.transaction.hash
@@ -115,12 +115,12 @@ export function newTransferFromBatch(
   index: i32
 ): void {
   // skip mint & burn
-  if (
-    event.params.from.toHexString() != ADDRESS_ZERO &&
-    event.params.to.toHexString() != ADDRESS_ZERO
-  ) {
-    return;
-  }
+  // if (
+  //   event.params.from.toHexString() != ADDRESS_ZERO &&
+  //   event.params.to.toHexString() != ADDRESS_ZERO
+  // ) {
+  //   return;
+  // }
 
   let entity = new Transfer(
     event.transaction.hash
