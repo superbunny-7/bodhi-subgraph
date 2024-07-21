@@ -55,6 +55,10 @@ export function handleRemove(event: RemoveEvent): void {
     asset.isDelete = true;
     asset.save();
 
+    const creator = getOrCreateUser(Address.fromString(asset.creator!), false);
+    creator.totalAssets = creator.totalAssets.minus(BI_ONE);
+    creator.save();
+    
     newRemove(event);
   }
 }
