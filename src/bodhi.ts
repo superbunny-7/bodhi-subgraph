@@ -29,36 +29,41 @@ import { Asset, User } from "../generated/schema";
 
 export function handleCreate(event: CreateEvent): void {
 
-  if (event.params.isContract == false) {
-    newCreate(event);
 
-    let user = getOrCreateUser(event.params.sender, event.params.isContract);
-    user.totalAssets = user.totalAssets.plus(BI_ONE);
-    user.save();
+  newCreate(event);
 
-    const asset = getOrCreateAsset(event.params.assetId);
-    asset.assetId = event.params.assetId;
-    asset.arTxId = event.params.arTxId;
-    asset.creator = event.params.sender.toHexString();
-    asset.save();
+  let user = getOrCreateUser(event.params.sender, event.params.isContract);
+  user.totalAssets = user.totalAssets.plus(BI_ONE);
+  user.save();
 
-    const userAsset = getOrCreateUserAsset(user, asset);
-    userAsset.amount = BigDecimal.fromString("1");
-    userAsset.save();
-  }
+  const asset = getOrCreateAsset(event.params.assetId);
+  asset.assetId = event.params.assetId;
+  asset.arTxId = event.params.arTxId;
+  asset.creator = event.params.sender.toHexString();
+  asset.save();
 
+  // if (event.params.isContract == false) {
+  const userAsset = getOrCreateUserAsset(user, asset);
+  userAsset.amount = BigDecimal.fromString("1");
+  userAsset.save();
+  // } 
 }
 
 export function handleRemove(event: RemoveEvent): void {
   let asset = Asset.load(event.params.assetId.toString());
-  if (asset) {
+  if (asset !== null) {
     asset.isDelete = true;
     asset.save();
 
-    const creator = getOrCreateUser(Address.fromString(asset.creator!), false);
-    creator.totalAssets = creator.totalAssets.minus(BI_ONE);
-    creator.save();
-    
+    if (asset.creator) {
+      const creator = getOrCreateUser(Address.fromString(asset.creator!), false);
+      if (creator.isContract == false) {
+        creator.totalAssets = creator.totalAssets.minus(BI_ONE);
+        creator.save();
+      }
+
+    }
+
     newRemove(event);
   }
 }
@@ -179,7 +184,7 @@ function handleTransfer(
     if (from.toHexString() != ADDRESS_ZERO) {
 
       //Sell
-      const isContract=from.toHexString()==TRADERHELPER;
+      const isContract = from.toHexString() == TRADERHELPER;
       const fromUser = getOrCreateUser(from, isContract);
       const userAsset = getOrCreateUserAsset(fromUser, asset);
       userAsset.amount = userAsset.amount.minus(amountBd);
@@ -194,7 +199,7 @@ function handleTransfer(
 
     if (to.toHexString() != ADDRESS_ZERO) {
       //Buy
-      const isContract=to.toHexString()==TRADERHELPER;
+      const isContract = to.toHexString() == TRADERHELPER;
       const toUser = getOrCreateUser(to, isContract);
       const userAsset = getOrCreateUserAsset(toUser, asset);
       if (userAsset.amount.equals(BD_ZERO) && amountBd.gt(BD_ZERO)) {
