@@ -70,13 +70,19 @@ export function handleRemove(event: RemoveEvent): void {
 
 export function handleTrade(event: TradeEvent): void {
   const trader = getOrCreateUser(event.params.sender, event.params.isContract);
+  if (trader && trader.isContract == false) {
+    if (event.params.isContract == true) {
+      trader.isContract = true;
+      trader.save()
+    }
+  }
   newTrade(event, trader);
 
   const asset = getOrCreateAsset(event.params.assetId);
 
   const deltaAmount = fromWei(event.params.tokenAmount);
   const creatorFee = fromWei(event.params.creatorFee);
-  const platformFee = fromWei(event.params.platformFee);
+  // const platformFee = fromWei(event.params.platformFee);
   const ethAmount = fromWei(event.params.ethAmount);
 
 
