@@ -1,6 +1,6 @@
 import { BigInt, BigDecimal } from "@graphprotocol/graph-ts";
 
-export const TRADERHELPER = "0x2277e686ab215ebc35fd04f17fa3233da472947b";
+export const TRADERHELPER = "0xb6bcf559e36e2f9ffd0f795b8eeb2d5f90c9c594";
 export const BI_ZERO = BigInt.fromI32(0);
 export const BI_ONE = BigInt.fromI32(1);
 export const BI_WAD = BigInt.fromI32(10).pow(18);

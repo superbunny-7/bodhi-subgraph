@@ -6,7 +6,7 @@
     "build": "graph build",
     "create": "graph create --node http://localhost:8020/ conflux/bodhi-subgraph",
     "remove": "graph remove --node http://localhost:8020/ conflux/bodhi-subgraph",
-    "deploy": "graph deploy --studio bodhi-subgraph-sepolia",
+    "deploy": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:8020 --version-label 2.0.0 conflux/bodhi-subgraph", 
     "deploy_goldsky": "goldsky subgraph deploy bodhi-subgraph-sepolia/1.0.2",
     "test": "graph test"
   },
