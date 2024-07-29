@@ -7,9 +7,9 @@ dataSources:
     name: Bodhi
     network: mainnet
     source:
-      address: "0x0001a18154e6065e10d2a787c50e7844cba7d902"
+      address: "0x81aa767e7977665ac124fa6306fb76fc7a628a8e"
       abi: Bodhi
-      startBlock: 101299880
+      startBlock: 101306455
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -40,9 +40,9 @@ dataSources:
     name: SpaceFactory
     network: mainnet
     source:
-      address: "0x825e27d2d6eaf3160af93ae8acbcef68161fddde"
+      address: "0x3f944ee92e3d8eb3bddb101a43197bf267b38c86"
       abi: SpaceFactory
-      startBlock: 101300450
+      startBlock: 101307065
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
