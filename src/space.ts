@@ -1,4 +1,4 @@
-import { SpaceFactory, Space, SpaceCount, Asset } from "../generated/schema";
+import { SpaceFactory, Space, SpaceCount, Asset, User } from "../generated/schema";
 import { Create as FactoryCreate, SpaceNameUpdated, AvatarUpdated } from "../generated/SpaceFactory/SpaceFactory";
 import { Create as SpaceCreate, Remove as SpaceRemove, RemoveBodhi } from "../generated/templates/Space/Space";
 import { Space as SpaceTemplate } from "../generated/templates";
@@ -57,6 +57,10 @@ export function handleFactoryCreate(event: FactoryCreate): void {
     if (asset) {
         entity.spaceAsset = asset.id;
     }
+    const user = User.load(creator);
+    if (user) {
+        entity.spaceUser = user.id;
+    }
     entity.save();
 
     // Create a new Space template instance for the dynamically created Space contract
@@ -112,7 +116,7 @@ export function handleSpaceCreate(event: SpaceCreate): void {
     spaceCountEntity.save();
 }
 
-export function handleRemoveBodhi(event: RemoveBodhi): void { 
+export function handleRemoveBodhi(event: RemoveBodhi): void {
     const id = event.params.parentId.toString().concat("-").concat(event.params.assetId.toString());
     let entity = Space.load(id);
     if (entity) {
