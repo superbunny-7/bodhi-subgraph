@@ -96,10 +96,11 @@ type SpaceFactory @entity {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
   spaceAsset: Asset!
+  spaceUser: User!
 }
 
 type Space @entity {
-  id:ID!
+  id: ID!
   sender: Bytes!
   parentId: BigInt!
   assetId: BigInt!
