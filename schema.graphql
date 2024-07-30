@@ -1,4 +1,3 @@
-
 type Create @entity(immutable: true) {
   id: Bytes!
   assetId: BigInt! # uint256
@@ -7,6 +6,7 @@ type Create @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
+  isContract: Boolean!
 }
 
 type Remove @entity(immutable: true) {
@@ -31,6 +31,7 @@ type Trade @entity(immutable: true) {
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: Bytes!
+  isContract: Boolean!
 }
 
 type Transfer @entity(immutable: true) {
@@ -48,9 +49,13 @@ type Transfer @entity(immutable: true) {
 type User @entity {
   id: ID!
   address: Bytes! # address
-  creatorProfit: BigDecimal!
-  tradingPnl: BigDecimal!
   totalTrades: BigInt!
+  totalAssets: BigInt!
+  totalTradVolume: BigDecimal!
+  totalTradValue: BigDecimal!
+  totalFees: BigDecimal!
+  totalHolders: BigInt!
+  isContract: Boolean!
   assets: [UserAsset!]! @derivedFrom(field: "user")
   trades: [Trade!]! @derivedFrom(field: "user")
 }
@@ -72,7 +77,43 @@ type Asset @entity {
   totalSupply: BigDecimal!
   totalTrades: BigInt!
   totalFees: BigDecimal!
-  totalVolume: BigDecimal!
+  totalTradValue: BigDecimal!
+  totalTradVolume: BigDecimal!
   totalHolders: BigInt!
   holders: [UserAsset!]! @derivedFrom(field: "asset")
+  isDelete: Boolean!
+}
+
+type SpaceFactory @entity {
+  id: ID!
+  user: Bytes! # address
+  spaceId: BigInt! # uint256
+  spaceAddress: Bytes!
+  descriptionAssetId: BigInt! # uint256
+  spaceName: String! # string
+  avatarArTxId: String! # string
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  spaceAsset: Asset!
+  spaceUser: User!
+}
+
+type Space @entity {
+  id: ID!
+  sender: Bytes!
+  parentId: BigInt!
+  assetId: BigInt!
+  arTxId: String!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  isDelete: Boolean!
+  spaceFactory: SpaceFactory
+}
+
+type SpaceCount @entity {
+  id: ID!
+  parentId: BigInt!
+  count: BigInt!
 }

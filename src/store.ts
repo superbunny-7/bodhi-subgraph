@@ -14,8 +14,8 @@ import {
   TransferBatch as TransferBatchEvent,
   TransferSingle as TransferSingleEvent,
 } from "../generated/Bodhi/Bodhi";
-import { Address, BigInt, Bytes } from "@graphprotocol/graph-ts";
-import { ADDRESS_ZERO, BD_ZERO, BI_ZERO, fromWei } from "./number";
+import { Address, BigDecimal, BigInt, Bytes } from "@graphprotocol/graph-ts";
+import { ADDRESS_ZERO, BD_WAD, BD_ZERO, BI_ONE, BI_ZERO, fromWei } from "./number";
 
 export function newCreate(event: CreateEvent): void {
   let create = new Create(
@@ -26,6 +26,7 @@ export function newCreate(event: CreateEvent): void {
   create.assetId = event.params.assetId;
   create.sender = event.params.sender;
   create.arTxId = event.params.arTxId;
+  create.isContract = event.params.isContract;
 
   create.blockNumber = event.block.number;
   create.blockTimestamp = event.block.timestamp;
@@ -63,10 +64,12 @@ export function newTrade(event: TradeEvent, user: User): void {
   entity.ethAmount = fromWei(event.params.ethAmount);
   entity.creatorFee = fromWei(event.params.creatorFee);
   entity.platformFee = fromWei(event.params.platformFee);
+  entity.isContract = event.params.isContract;
 
   if (entity.tokenAmount.gt(BD_ZERO)) {
     entity.price = entity.ethAmount
       .plus(entity.creatorFee)
+      .plus(entity.platformFee)
       .div(entity.tokenAmount);
   } else {
     entity.price = BD_ZERO;
@@ -81,12 +84,12 @@ export function newTrade(event: TradeEvent, user: User): void {
 
 export function newTransferFromSingle(event: TransferSingleEvent): void {
   // skip mint & burn
-  if (
-    event.params.from.toHexString() != ADDRESS_ZERO &&
-    event.params.to.toHexString() != ADDRESS_ZERO
-  ) {
-    return;
-  }
+  // if (
+  //   event.params.from.toHexString() != ADDRESS_ZERO &&
+  //   event.params.to.toHexString() != ADDRESS_ZERO
+  // ) {
+  //   return;
+  // }
 
   let entity = new Transfer(
     event.transaction.hash
@@ -112,12 +115,12 @@ export function newTransferFromBatch(
   index: i32
 ): void {
   // skip mint & burn
-  if (
-    event.params.from.toHexString() != ADDRESS_ZERO &&
-    event.params.to.toHexString() != ADDRESS_ZERO
-  ) {
-    return;
-  }
+  // if (
+  //   event.params.from.toHexString() != ADDRESS_ZERO &&
+  //   event.params.to.toHexString() != ADDRESS_ZERO
+  // ) {
+  //   return;
+  // }
 
   let entity = new Transfer(
     event.transaction.hash
@@ -138,6 +141,26 @@ export function newTransferFromBatch(
   entity.save();
 }
 
+export function getOrCreateUser(addr: Address, isContract: boolean): User {
+  const id = addr.toHexString();
+  let user = User.load(id);
+  if (user == null) {
+    user = new User(id);
+    user.address = addr;
+    // user.creatorProfit = BD_ZERO;
+    // user.tradingPnl = BD_ZERO;
+    user.totalTrades = BI_ZERO;
+    user.totalAssets = BI_ZERO;
+    user.totalTradVolume = BD_ZERO;
+    user.totalTradValue = BD_ZERO;
+    user.totalFees = BD_ZERO;
+    user.totalHolders = BI_ZERO;
+    user.isContract = isContract;
+    user.save();
+  }
+  return user;
+}
+
 export function getOrCreateAsset(id: BigInt): Asset {
   let asset = Asset.load(id.toString());
   if (asset == null) {
@@ -146,28 +169,18 @@ export function getOrCreateAsset(id: BigInt): Asset {
     asset.arTxId = null;
     asset.creator = null;
     asset.totalSupply = BD_ZERO;
-    asset.totalTrades = BI_ZERO;
+    asset.totalTrades = BI_ONE;
     asset.totalFees = BD_ZERO;
-    asset.totalVolume = BD_ZERO;
-    asset.totalHolders = BI_ZERO;
+    asset.totalTradValue = BD_ZERO;
+    asset.totalTradVolume = BD_ZERO;
+    asset.totalHolders = BI_ONE;
+    asset.isDelete = false;
     asset.save();
   }
   return asset;
 }
 
-export function getOrCreateUser(addr: Address): User {
-  const id = addr.toHexString();
-  let user = User.load(id);
-  if (user == null) {
-    user = new User(id);
-    user.address = addr;
-    user.creatorProfit = BD_ZERO;
-    user.tradingPnl = BD_ZERO;
-    user.totalTrades = BI_ZERO;
-    user.save();
-  }
-  return user;
-}
+
 
 export function getOrCreateUserAsset(user: User, asset: Asset): UserAsset {
   const id = user.id.concat("-").concat(asset.id);
@@ -183,3 +196,4 @@ export function getOrCreateUserAsset(user: User, asset: Asset): UserAsset {
   }
   return userAsset;
 }
+

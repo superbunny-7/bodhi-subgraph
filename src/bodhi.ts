@@ -1,4 +1,4 @@
-import { Address, BigInt, store } from "@graphprotocol/graph-ts";
+import { Address, BigDecimal, BigInt } from "@graphprotocol/graph-ts";
 import {
   Create as CreateEvent,
   Remove as RemoveEvent,
@@ -11,9 +11,9 @@ import {
   BD_WAD,
   BD_ZERO,
   BI_ONE,
-  BI_WAD,
   BI_ZERO,
   fromWei,
+  TRADERHELPER,
 } from "./number";
 import {
   newCreate,
@@ -21,79 +21,138 @@ import {
   newTrade,
   newTransferFromSingle,
   newTransferFromBatch,
-  getOrCreateAsset,
-  getOrCreateUser,
   getOrCreateUserAsset,
+  getOrCreateUser,
+  getOrCreateAsset,
 } from "./store";
+import { Asset, User } from "../generated/schema";
 
 export function handleCreate(event: CreateEvent): void {
+
+
   newCreate(event);
-  getOrCreateUser(event.params.sender);
+
+  let user = getOrCreateUser(event.params.sender, event.params.isContract);
+  user.totalAssets = user.totalAssets.plus(BI_ONE);
+  user.save();
+
   const asset = getOrCreateAsset(event.params.assetId);
   asset.assetId = event.params.assetId;
   asset.arTxId = event.params.arTxId;
   asset.creator = event.params.sender.toHexString();
-  asset.totalSupply = BD_WAD;
   asset.save();
+
+  // if (event.params.isContract == false) {
+  const userAsset = getOrCreateUserAsset(user, asset);
+  userAsset.amount = BigDecimal.fromString("1");
+  userAsset.save();
+  // } 
 }
 
 export function handleRemove(event: RemoveEvent): void {
-  newRemove(event);
+  let asset = Asset.load(event.params.assetId.toString());
+  if (asset !== null) {
+    asset.isDelete = true;
+    asset.save();
+
+    if (asset.creator) {
+      const creator = getOrCreateUser(Address.fromString(asset.creator!), false);
+      if (creator.isContract == false) {
+        creator.totalAssets = creator.totalAssets.minus(BI_ONE);
+        creator.save();
+      }
+
+    }
+
+    newRemove(event);
+  }
 }
 
 export function handleTrade(event: TradeEvent): void {
-  const trader = getOrCreateUser(event.params.sender);
+  const trader = getOrCreateUser(event.params.sender, event.params.isContract);
+  if (trader && trader.isContract == false) {
+    if (event.params.isContract == true) {
+      trader.isContract = true;
+      trader.save()
+    }
+  }
   newTrade(event, trader);
 
-  const deltaAmount = fromWei(event.params.tokenAmount);
-
   const asset = getOrCreateAsset(event.params.assetId);
-  asset.totalTrades = asset.totalTrades.plus(BI_ONE);
-  trader.totalTrades = trader.totalTrades.plus(BI_ONE);
+
+  const deltaAmount = fromWei(event.params.tokenAmount);
+  const creatorFee = fromWei(event.params.creatorFee);
+  // const platformFee = fromWei(event.params.platformFee);
+  const ethAmount = fromWei(event.params.ethAmount);
+
+
+  // if (asset) {
+
+  // if (event.params.isContract == false) {
+  //   const trader = User.load(event.params.sender.toHexString());
+  //   if (trader == null) {
+  //     let user = getOrCreateUser(event.params.sender, false);
+  //     user.totalAssets = user.totalAssets.plus(BI_ONE);
+  //     user.save();
+
+  //     const userAsset = getOrCreateUserAsset(event.params.sender.toHexString(), asset);
+  //     userAsset.amount = BigDecimal.fromString("1");
+  //     userAsset.save();
+  //   }
+  // }
+
+
   if (event.params.tradeType == 0) {
-    // create
+    //MINT 
     asset.totalSupply = deltaAmount;
     asset.save();
     trader.save();
     return;
   }
 
-  const creator = getOrCreateUser(Address.fromString(asset.creator!));
-  const traderAsset = getOrCreateUserAsset(trader, asset);
-
-  const creatorFee = fromWei(event.params.creatorFee);
-  const ethAmount = fromWei(event.params.ethAmount);
-
-  asset.totalFees = asset.totalFees.plus(creatorFee);
-  asset.totalVolume = asset.totalVolume.plus(ethAmount);
-
-  creator.creatorProfit = creator.creatorProfit.plus(creatorFee);
-  creator.save();
-
   if (event.params.tradeType == 1) {
-    // buy
+    //Buy
+    asset.totalTrades = asset.totalTrades.plus(BI_ONE);
     asset.totalSupply = asset.totalSupply.plus(deltaAmount);
-    const cost = creatorFee.plus(ethAmount);
-    // traderAsset.amount is updated before this handle function (in handleTransfer)
-    // newCost = ((updatedAmount - deltaAmount) * avgPriceBefore + cost)
-    // newAvgPrice = newCost / updatedAmount
-    traderAsset.avgPrice = traderAsset.amount
-      .minus(deltaAmount)
-      .times(traderAsset.avgPrice)
-      .plus(cost)
-      .div(traderAsset.amount);
-    traderAsset.save();
   } else {
-    // sell
+    //Sell
+    asset.totalTrades = asset.totalTrades.plus(BI_ONE);
     asset.totalSupply = asset.totalSupply.minus(deltaAmount);
-    const cost = deltaAmount.times(traderAsset.avgPrice);
-    trader.tradingPnl = trader.tradingPnl.plus(
-      ethAmount.minus(creatorFee).minus(cost)
-    );
-    trader.save();
   }
-
+  asset.totalFees = asset.totalFees.plus(creatorFee); //.plus(platformFee);
+  // asset.totalVolume = asset.totalVolume.plus(ethAmount);
+  asset.totalTradValue = asset.totalTradValue.plus(ethAmount);
+  asset.totalTradVolume = asset.totalTradVolume.plus(deltaAmount);
   asset.save();
+
+  const creator = getOrCreateUser(Address.fromString(asset.creator!), false);
+
+  // if (creator) {
+  creator.totalTrades = creator.totalTrades.plus(BI_ONE);
+  creator.totalFees = creator.totalFees.plus(creatorFee);
+  creator.totalTradValue = creator.totalTradValue.plus(ethAmount);
+  creator.totalTradVolume = creator.totalTradVolume.plus(deltaAmount);
+  creator.save();
+  // }
+
+
+  // if (event.params.tradeType == 1) {
+  //   // if (event.params.isContract == false) {
+  //   const cost = creatorFee.plus(platformFee).plus(ethAmount);
+
+  //   const traderAsset = getOrCreateUserAsset(trader, asset);
+  //   traderAsset.avgPrice = traderAsset.amount
+  //     .minus(deltaAmount)
+  //     .times(traderAsset.avgPrice)
+  //     .plus(cost)
+  //     .div(traderAsset.amount);
+  //   traderAsset.save();
+
+  //   // }
+  // }
+
+  // }
+
 }
 
 export function handleTransferBatch(event: TransferBatchEvent): void {
@@ -125,29 +184,43 @@ function handleTransfer(
   const amountBd = fromWei(amount);
   let assetChanged = false;
 
-  if (from.toHexString() != ADDRESS_ZERO) {
-    const fromUser = getOrCreateUser(from);
-    const userAsset = getOrCreateUserAsset(fromUser, asset);
-    userAsset.amount = userAsset.amount.minus(amountBd);
-    if (userAsset.amount.equals(BD_ZERO)) {
-      asset.totalHolders = asset.totalHolders.minus(BI_ONE);
-      assetChanged = true;
-    }
-    userAsset.save();
-  }
+  if (asset.creator) {
+    const creator = getOrCreateUser(Address.fromString(asset.creator!), false);
 
-  if (to.toHexString() != ADDRESS_ZERO) {
-    const toUser = getOrCreateUser(to);
-    const userAsset = getOrCreateUserAsset(toUser, asset);
-    if (userAsset.amount.equals(BD_ZERO) && amountBd.gt(BD_ZERO)) {
-      asset.totalHolders = asset.totalHolders.plus(BI_ONE);
-      assetChanged = true;
-    }
-    userAsset.amount = userAsset.amount.plus(amountBd);
-    userAsset.save();
-  }
+    if (from.toHexString() != ADDRESS_ZERO) {
 
-  if (assetChanged) {
-    asset.save();
+      //Sell
+      const isContract = from.toHexString() == TRADERHELPER;
+      const fromUser = getOrCreateUser(from, isContract);
+      const userAsset = getOrCreateUserAsset(fromUser, asset);
+      userAsset.amount = userAsset.amount.minus(amountBd);
+
+      if (userAsset.amount.equals(BD_ZERO)) {
+        asset.totalHolders = asset.totalHolders.minus(BI_ONE);
+        creator.totalHolders = creator.totalHolders.minus(BI_ONE);
+        assetChanged = true;
+      }
+      userAsset.save();
+    }
+
+    if (to.toHexString() != ADDRESS_ZERO) {
+      //Buy
+      const isContract = to.toHexString() == TRADERHELPER;
+      const toUser = getOrCreateUser(to, isContract);
+      const userAsset = getOrCreateUserAsset(toUser, asset);
+      if (userAsset.amount.equals(BD_ZERO) && amountBd.gt(BD_ZERO)) {
+        asset.totalHolders = asset.totalHolders.plus(BI_ONE);
+        creator.totalHolders = creator.totalHolders.plus(BI_ONE);
+        assetChanged = true;
+      }
+      userAsset.amount = userAsset.amount.plus(amountBd);
+      userAsset.save();
+    }
+
+    if (assetChanged) {
+      asset.save();
+      creator.save();
+    }
   }
 }
+

@@ -1,14 +1,15 @@
 specVersion: 0.0.5
 schema:
   file: ./schema.graphql
+
 dataSources:
   - kind: ethereum
     name: Bodhi
-    network: sepolia
+    network: mainnet
     source:
-      address: "0x97f4ca1e44d2675b84772bc3f295d297f14953d6"
+      address: "0x81aa767e7977665ac124fa6306fb76fc7a628a8e"
       abi: Bodhi
-      startBlock: 6264315
+      startBlock: 101306455
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -23,14 +24,64 @@ dataSources:
         - name: Bodhi
           file: ./abis/Bodhi.json
       eventHandlers:
-        - event: Create(indexed uint256,indexed address,string)
+        - event: Create(indexed uint256,indexed address,string,bool)
           handler: handleCreate
         - event: Remove(indexed uint256,indexed address)
           handler: handleRemove
-        - event: Trade(indexed uint8,indexed uint256,indexed address,uint256,uint256,uint256,uint256)
+        - event: Trade(indexed uint8,indexed uint256,indexed address,uint256,uint256,uint256,uint256,bool)
           handler: handleTrade
         - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])
           handler: handleTransferBatch
         - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)
           handler: handleTransferSingle
       file: ./src/bodhi.ts
+
+  - kind: ethereum
+    name: SpaceFactory
+    network: mainnet
+    source:
+      address: "0x3f944ee92e3d8eb3bddb101a43197bf267b38c86"
+      abi: SpaceFactory
+      startBlock: 101307065
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - SpaceFactory
+        - Space
+      abis:
+        - name: SpaceFactory
+          file: ./abis/SpaceFactory.json
+        - name: Space
+          file: ./abis/Space.json
+      eventHandlers:
+        - event: Create(uint256,indexed address,indexed uint256,address,string)
+          handler: handleFactoryCreate
+        - event: SpaceNameUpdated(indexed address,string,string)
+          handler: handleSpaceNameUpdated
+        - event: AvatarUpdated(indexed address,string,uint256)
+          handler: handleAvatarUpdated
+      file: ./src/space.ts
+
+templates:
+  - kind: ethereum
+    name: Space
+    network: mainnet
+    source:
+      abi: Space
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Space
+      abis:
+        - name: Space
+          file: ./abis/Space.json
+      eventHandlers:
+        - event: Create(indexed uint256,indexed uint256,indexed address,string)
+          handler: handleSpaceCreate
+        - event: RemoveBodhi(indexed uint256,indexed uint256,address)
+          handler: handleRemoveBodhi
+      file: ./src/space.ts
